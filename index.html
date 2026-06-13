@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <title>Sylas Training Hub - 跑步训练强度计算器</title>
+  <meta name="description" content="一站式跑步训练工具：心率区间计算、配速课表设计、训练强度联动分析。基于储备心率法和运动生理学，帮助跑者科学训练。">
+  <meta name="keywords" content="跑步训练,心率区间,配速计算,训练计划,马拉松,储备心率,呼吸商,RQ,间歇训练,Sylas">
+  <meta name="author" content="Charles Peng">
+  <meta name="theme-color" content="#c8694a">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Sylas Training Hub - 跑步训练强度计算器">
+  <meta property="og:description" content="一站式跑步训练工具：心率区间 + 配速课表 + 智能联动分析">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:url" content="https://sylas.cc.cd/">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Sylas Training Hub">
+  <meta name="twitter:description" content="科学训练，从了解心率和配速开始">
+
+  <link rel="stylesheet" href="./assets/styles.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Hero 头部 -->
+    <header class="hero">
+      <p class="hero-eyebrow">Sylas Training Hub</p>
+      <h1 class="hero-title">🏃 跑步训练强度计算器</h1>
+      <p class="hero-subtitle">
+        融合心率区间分析与配速课表设计，基于储备心率法和运动生理学，为跑者提供科学的训练强度指导。
+        支持独立使用或智能联动，一站式解决训练计划设计需求。
+      </p>
+    </header>
+
+    <!-- 标签页导航 -->
+    <nav class="tabs" role="tablist">
+      <button class="tab-btn active" data-tab="hr-zones" role="tab" aria-selected="true" aria-controls="hr-zones-panel">
+        📊 心率区间
+      </button>
+      <button class="tab-btn" data-tab="pace-table" role="tab" aria-selected="false" aria-controls="pace-table-panel">
+        ⏱️ 配速课表
+      </button>
+      <button class="tab-btn" data-tab="combined" role="tab" aria-selected="false" aria-controls="combined-panel">
+        🔗 智能联动
+      </button>
+    </nav>
+
+    <!-- 标签页 1: 心率区间 -->
+    <div id="hr-zones-panel" class="tab-content active" role="tabpanel" aria-labelledby="hr-zones">
+      <div class="card">
+        <h2 class="card-title">心率区间计算</h2>
+        <p class="card-subtitle">
+          基于储备心率法估算训练区间，结合呼吸商 RQ 与供能系统变化进行可视化展示。
+        </p>
+
+        <!-- 输入表单 -->
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="restHR" class="form-label">静息心率 (次/分)</label>
+            <input type="number" id="restHR" class="form-input" value="60" min="40" max="100">
+            <span class="form-hint">建议在清晨自然醒来后、起身前测量，连续记录 3-7 天取平均值。</span>
+          </div>
+
+          <div class="form-field">
+            <label for="age" class="form-label">年龄 (岁) <small>用于估算最大心率</small></label>
+            <input type="number" id="age" class="form-input" value="35" min="10" max="100">
+          </div>
+
+          <div class="form-field">
+            <label for="maxHrFormula" class="form-label">最大心率估算公式</label>
+            <select id="maxHrFormula" class="form-select">
+              <option value="fox">Fox: 220 - 年龄</option>
+              <option value="tanaka">Tanaka: 208 - 0.7 × 年龄</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="maxHR" class="form-label">实测最大心率 <small>(可选，填写后优先使用)</small></label>
+            <input type="number" id="maxHR" class="form-input" min="120" max="220" placeholder="留空则按年龄估算">
+            <span class="form-hint" id="formulaHint">当前估算公式：220 - 年龄。若有实测值，建议优先填写。</span>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn" id="calcHrBtn">计算心率区间</button>
+            <button class="btn secondary" id="shareHrBtn">复制分享链接</button>
+          </div>
+        </div>
+
+        <!-- 统计卡片 -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-label">静息心率</span>
+            <span class="stat-value" id="hrRestDisplay">60</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">最大心率</span>
+            <span class="stat-value" id="hrMaxDisplay">185</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">储备心率</span>
+            <span class="stat-value" id="hrReserveDisplay">125</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">数据来源</span>
+            <span class="stat-value" style="font-size: 14px;" id="hrSourceDisplay">估算</span>
+          </div>
+        </div>
+
+        <div class="notice" id="hrNotice">
+          输入参数后点击"计算心率区间"查看结果。
+        </div>
+      </div>
+
+      <!-- 心率区间结果表格 -->
+      <div class="card" id="hrResultsCard" style="display: none;">
+        <h2 class="card-title">训练区间详情</h2>
+        <p class="card-subtitle">
+          按储备心率百分比划分的 6 个训练区间（D/E/M/T/A/I），以及对应的 RQ 区间和训练用途。
+        </p>
+
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>区间</th>
+                <th>强度范围</th>
+                <th>心率范围 (bpm)</th>
+                <th class="numeric">参考 RQ</th>
+                <th>供能倾向</th>
+                <th>训练用途</th>
+              </tr>
+            </thead>
+            <tbody id="hrZonesTableBody">
+              <!-- 动态填充 -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="notice">
+          <strong>说明：</strong>RQ（呼吸商）与供能占比为运动生理学参考区间，实际表现受训练水平、营养状态、环境等因素影响。
+        </div>
+      </div>
+    </div>
+
+    <!-- 标签页 2: 配速课表 -->
+    <div id="pace-table-panel" class="tab-content" role="tabpanel" aria-labelledby="pace-table">
+      <div class="card">
+        <h2 class="card-title">配速课表设计</h2>
+        <p class="card-subtitle">
+          输入 10 公里 PB 配速，自动推导短间歇、长间歇、匀速跑建议配速，以及比赛成绩预测。
+        </p>
+
+        <!-- 输入表单 -->
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="pbPace" class="form-label">10公里 PB 配速 <small>(格式: mm:ss)</small></label>
+            <input type="text" id="pbPace" class="form-input" value="03:50" placeholder="例如 03:50" maxlength="5" inputmode="numeric">
+            <span class="form-hint" id="pbPaceHint">请输入 mm:ss 格式，秒数必须在 00-59 之间，例如 03:50。</span>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn" id="calcPaceBtn">计算配速课表</button>
+            <button class="btn secondary" id="sharePaceBtn">复制分享链接</button>
+          </div>
+        </div>
+
+        <!-- 统计卡片 -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-label">当前 PB 配速</span>
+            <span class="stat-value" id="paceCurrentDisplay">03:50</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">5km 预测</span>
+            <span class="stat-value" id="pace5kmDisplay">18:20</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">半马预测</span>
+            <span class="stat-value" id="paceHalfDisplay">1:22:15</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">全马预测</span>
+            <span class="stat-value" id="paceFullDisplay">2:55:49</span>
+          </div>
+        </div>
+
+        <div class="notice" id="paceNotice">
+          输入 10km PB 配速后点击"计算配速课表"查看详细训练方案。
+        </div>
+      </div>
+
+      <!-- 间歇训练表格 -->
+      <div class="card" id="intervalResultsCard" style="display: none;">
+        <h2 class="card-title">间歇训练建议</h2>
+        <p class="card-subtitle">
+          基于 10km PB 配速，按秒数增减得到不同距离的建议配速和组数安排。
+        </p>
+
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>训练类型</th>
+                <th>距离</th>
+                <th class="numeric">时间变化</th>
+                <th class="numeric">建议配速</th>
+                <th class="numeric">间歇时长</th>
+                <th class="numeric">建议组数</th>
+              </tr>
+            </thead>
+            <tbody id="intervalTableBody">
+              <!-- 动态填充 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 匀速跑与比赛预测表格 -->
+      <div class="card" id="steadyResultsCard" style="display: none;">
+        <h2 class="card-title">匀速跑与比赛预测</h2>
+        <p class="card-subtitle">
+          配速 = PB 配速 ± 秒差，成绩 = 配速 × 距离。
+        </p>
+
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>训练类别</th>
+                <th class="numeric">建议配速</th>
+                <th>训练时长</th>
+                <th>比赛项</th>
+                <th class="numeric">比赛配速</th>
+                <th class="numeric">成绩预测</th>
+              </tr>
+            </thead>
+            <tbody id="steadyTableBody">
+              <!-- 动态填充 -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="notice">
+          <strong>说明：</strong>比赛成绩预测按"比赛配速 × 距离"计算。半马距离 21.0975km，全马距离 42.195km。
+        </div>
+      </div>
+    </div>
+
+    <!-- 标签页 3: 智能联动 -->
+    <div id="combined-panel" class="tab-content" role="tabpanel" aria-labelledby="combined">
+      <div class="card">
+        <h2 class="card-title">🔗 心率配速智能联动</h2>
+        <p class="card-subtitle">
+          同时输入心率参数和配速参数，查看训练区间的心率-配速对照关系。
+        </p>
+
+        <div class="notice notice-warning">
+          <strong>功能开发中：</strong>此功能将在后续版本中提供心率区间与配速区间的智能映射和联动分析。
+          <br><br>
+          目前请分别使用"心率区间"和"配速课表"标签页独立计算。
+        </p>
+
+        <!-- 预留：心率-配速对照表 -->
+        <div id="combinedResults" style="display: none;">
+          <h3 class="card-title">训练区间对照表</h3>
+          <div class="table-wrapper">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>训练区间</th>
+                  <th>心率范围 (bpm)</th>
+                  <th class="numeric">建议配速</th>
+                  <th>训练目标</th>
+                </tr>
+              </thead>
+              <tbody id="combinedTableBody">
+                <!-- 未来动态填充 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="card" style="text-align: center;">
+      <p class="text-muted" style="margin: 0; font-size: 14px;">
+        <strong>设计与开发：</strong>Charles Peng
+        <br>
+        <strong>联络邮箱：</strong><a href="mailto:pengpcy@qq.com" style="color: var(--primary);">pengpcy@qq.com</a>
+      </p>
+    </footer>
+  </div>
+
+  <script src="./assets/app.js"></script>
+</body>
+</html>
