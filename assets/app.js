@@ -582,5 +582,5 @@ document.addEventListener('DOMContentLoaded', () => {
   loadFromURL();
   initControls();
   recompute();
-  console.log('🏃 RQrunning - Interactive Widget initialized');
+  console.log('🏃 呼吸节奏 (RQrunning) - Interactive Widget initialized');
 });
