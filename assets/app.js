@@ -1,68 +1,18 @@
 // =============================================================================
-// Sylas Training Hub - 核心逻辑
+// Sylas Training Hub - 交互式 Widget 逻辑
 // =============================================================================
 
-// 全局状态管理
+// 全局状态
 const state = {
-  // 心率参数
+  maxHR: 185,
   restHR: 60,
-  age: 35,
-  maxHR: null,
-  maxHRFormula: 'fox',
-
-  // 配速参数
   pbPace: '03:50',
-
-  // 计算结果
-  hrZones: [],
-  paceIntervals: [],
-  paceSteady: [],
-
-  // 联动状态
-  hasHRData: false,
-  hasPaceData: false
+  selectedZone: 'T',  // 默认选中 T 区（乳酸阈值）
+  zones: [],
+  pbPaceSeconds: 230
 };
 
-// =============================================================================
-// 标签页切换
-// =============================================================================
-
-function initTabs() {
-  const tabBtns = document.querySelectorAll('.tab-btn');
-  const tabContents = document.querySelectorAll('.tab-content');
-
-  tabBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const targetTab = btn.dataset.tab;
-
-      // 移除所有 active 状态
-      tabBtns.forEach(b => {
-        b.classList.remove('active');
-        b.setAttribute('aria-selected', 'false');
-      });
-      tabContents.forEach(c => c.classList.remove('active'));
-
-      // 激活当前标签
-      btn.classList.add('active');
-      btn.setAttribute('aria-selected', 'true');
-      document.getElementById(`${targetTab}-panel`).classList.add('active');
-
-      // 如果切换到联动标签页，渲染结果
-      if (targetTab === 'combined') {
-        renderCombinedResults();
-      }
-
-      // 更新 URL
-      updateURL({ tab: targetTab });
-    });
-  });
-}
-
-// =============================================================================
-// 心率区间计算
-// =============================================================================
-
-// 训练区间配置
+// 训练区间配置（复用原有数据）
 const HR_ZONES = [
   {
     code: 'D',
@@ -120,147 +70,7 @@ const HR_ZONES = [
   }
 ];
 
-// 计算最大心率
-function calculateMaxHR(age, formula) {
-  if (formula === 'tanaka') {
-    return Math.round(208 - 0.7 * age);
-  }
-  return 220 - age; // fox
-}
-
-// 计算心率区间
-function calculateHRZones(restHR, maxHR) {
-  const reserve = maxHR - restHR;
-
-  return HR_ZONES.map(zone => {
-    const hrMin = Math.round(restHR + reserve * zone.min);
-    const hrMax = Math.round(restHR + reserve * zone.max);
-
-    return {
-      ...zone,
-      hrMin,
-      hrMax,
-      hrRange: `${hrMin}-${hrMax}`,
-      intensity: `${Math.round(zone.min * 100)}-${Math.round(zone.max * 100)}%`
-    };
-  });
-}
-
-// 渲染心率区间表格
-function renderHRZones(zones) {
-  const tbody = document.getElementById('hrZonesTableBody');
-
-  tbody.innerHTML = zones.map(zone => `
-    <tr>
-      <td><span class="badge badge-zone-${zone.code.toLowerCase()}">${zone.code} 区</span></td>
-      <td>${zone.intensity}</td>
-      <td class="font-mono font-bold">${zone.hrRange} bpm</td>
-      <td class="numeric font-mono">${zone.rq}</td>
-      <td>${zone.energy}</td>
-      <td>${zone.use}</td>
-    </tr>
-  `).join('');
-}
-
-// 心率计算按钮事件
-function initHRCalculator() {
-  const calcBtn = document.getElementById('calcHrBtn');
-  const shareBtn = document.getElementById('shareHrBtn');
-  const restHRInput = document.getElementById('restHR');
-  const ageInput = document.getElementById('age');
-  const maxHRInput = document.getElementById('maxHR');
-  const formulaSelect = document.getElementById('maxHrFormula');
-
-  // 更新公式提示
-  formulaSelect.addEventListener('change', () => {
-    const formula = formulaSelect.value;
-    const age = parseInt(ageInput.value) || 35;
-    const estimated = calculateMaxHR(age, formula);
-    const formulaText = formula === 'fox' ? '220 - 年龄' : '208 - 0.7 × 年龄';
-    document.getElementById('formulaHint').textContent =
-      `当前估算公式：${formulaText}，估算值 ${estimated} bpm。若有实测值，建议优先填写。`;
-  });
-
-  ageInput.addEventListener('input', () => {
-    formulaSelect.dispatchEvent(new Event('change'));
-  });
-
-  // 计算心率区间
-  calcBtn.addEventListener('click', () => {
-    const restHR = parseInt(restHRInput.value);
-    const age = parseInt(ageInput.value);
-    const maxHRManual = maxHRInput.value ? parseInt(maxHRInput.value) : null;
-    const formula = formulaSelect.value;
-
-    // 验证输入
-    if (!restHR || restHR < 40 || restHR > 100) {
-      showNotice('hrNotice', '请输入有效的静息心率（40-100 bpm）', 'error');
-      return;
-    }
-
-    if (!age || age < 10 || age > 100) {
-      showNotice('hrNotice', '请输入有效的年龄（10-100 岁）', 'error');
-      return;
-    }
-
-    // 确定最大心率
-    let maxHR;
-    let source;
-    if (maxHRManual) {
-      maxHR = maxHRManual;
-      source = '实测';
-    } else {
-      maxHR = calculateMaxHR(age, formula);
-      source = '估算';
-    }
-
-    // 更新状态
-    state.restHR = restHR;
-    state.age = age;
-    state.maxHR = maxHR;
-    state.maxHRFormula = formula;
-    state.hasHRData = true;
-
-    // 计算区间
-    const zones = calculateHRZones(restHR, maxHR);
-    state.hrZones = zones;
-
-    // 更新显示
-    document.getElementById('hrRestDisplay').textContent = restHR;
-    document.getElementById('hrMaxDisplay').textContent = maxHR;
-    document.getElementById('hrReserveDisplay').textContent = maxHR - restHR;
-    document.getElementById('hrSourceDisplay').textContent = source;
-
-    // 渲染结果
-    renderHRZones(zones);
-    document.getElementById('hrResultsCard').style.display = 'block';
-
-    showNotice('hrNotice', '✓ 计算完成！已生成 6 个训练区间。', 'success');
-
-    // 更新 URL
-    updateURL({
-      restHR,
-      age,
-      maxHR: maxHRManual || '',
-      formula
-    });
-  });
-
-  // 分享链接
-  shareBtn.addEventListener('click', () => {
-    copyCurrentURL();
-    showNotice('hrNotice', '✓ 分享链接已复制到剪贴板！', 'success');
-  });
-
-  // 初始化时触发公式提示
-  formulaSelect.dispatchEvent(new Event('change'));
-}
-
-// =============================================================================
-// 配速课表计算
-// =============================================================================
-
-// 间歇训练配置
+// 间歇训练配置（复用）
 const INTERVAL_ROWS = [
   { type: '短间歇', distance: '400米', delta: -30, rest: '01:30', reps: '10-30组' },
   { type: '', distance: '800米', delta: -15, rest: '02:30', reps: '6-25组' },
@@ -271,7 +81,7 @@ const INTERVAL_ROWS = [
   { type: '重复跑', distance: '＜400米', delta: null, rest: '充分恢复', reps: '10-30组', paceText: '全力冲刺' }
 ];
 
-// 匀速跑配置
+// 匀速跑配置（复用）
 const STEADY_ROWS = [
   { category: '有氧（上限）', delta: 40, duration: '40-90分钟', race: '5km', raceDelta: -10, raceDistance: 5 },
   { category: '有氧（下限）', delta: 100, duration: '40-90分钟', race: '10km', raceDelta: 0, raceDistance: 10 },
@@ -279,20 +89,30 @@ const STEADY_ROWS = [
   { category: '节奏（下限）', delta: 35, duration: '30-80分钟', race: '全马', raceDelta: 20, raceDistance: 42.195 }
 ];
 
-// 解析配速字符串 (mm:ss -> 秒)
+// 配速偏移映射（复用）
+const PACE_OFFSETS = {
+  'D': +80,
+  'E': +50,
+  'M': +25,
+  'T': +5,
+  'A': -8,
+  'I': -20
+};
+
+// =============================================================================
+// 工具函数（复用）
+// =============================================================================
+
 function parsePace(text) {
   const value = String(text || '').trim();
   const match = value.match(/^(\d{1,2}):(\d{2})$/);
   if (!match) return null;
-
   const minutes = Number(match[1]);
   const seconds = Number(match[2]);
   if (seconds > 59) return null;
-
   return minutes * 60 + seconds;
 }
 
-// 格式化配速 (秒 -> mm:ss)
 function formatPace(seconds) {
   const total = Math.max(0, Math.round(seconds));
   const minutes = Math.floor(total / 60);
@@ -300,459 +120,427 @@ function formatPace(seconds) {
   return `${String(minutes).padStart(2, '0')}:${String(remain).padStart(2, '0')}`;
 }
 
-// 格式化时长 (秒 -> h:mm:ss 或 mm:ss)
 function formatDuration(seconds) {
   const total = Math.max(0, Math.round(seconds));
   const hours = Math.floor(total / 3600);
   const minutes = Math.floor((total % 3600) / 60);
   const remain = total % 60;
-
   if (hours > 0) {
     return `${hours}:${String(minutes).padStart(2, '0')}:${String(remain).padStart(2, '0')}`;
   }
   return `${minutes}:${String(remain).padStart(2, '0')}`;
 }
 
-// 规范化配速输入
 function normalizePaceInput(text) {
   const digits = String(text || '').replace(/\D/g, '').slice(0, 4);
   if (!digits) return '';
-
   if (digits.length <= 2) return digits;
-
   const minutes = digits.slice(0, digits.length - 2);
   const seconds = digits.slice(-2);
   return `${minutes}:${seconds}`;
 }
 
-// 渲染间歇训练表格
-function renderIntervalTable(pbSeconds) {
-  const tbody = document.getElementById('intervalTableBody');
-
-  tbody.innerHTML = INTERVAL_ROWS.map(row => {
-    const pace = row.paceText || formatPace(pbSeconds + row.delta);
-    const deltaText = row.delta === null ? '-' : `${row.delta > 0 ? '+' : ''}${row.delta}秒`;
-    const typeCell = row.type ? `<span class="badge">${row.type}</span>` : '';
-
-    return `
-      <tr>
-        <td>${typeCell}</td>
-        <td>${row.distance}</td>
-        <td class="numeric font-mono">${deltaText}</td>
-        <td class="numeric font-mono font-bold text-primary">${pace}</td>
-        <td class="numeric font-mono">${row.rest}</td>
-        <td class="numeric">${row.reps}</td>
-      </tr>
-    `;
-  }).join('');
-}
-
-// 渲染匀速跑表格
-function renderSteadyTable(pbSeconds) {
-  const tbody = document.getElementById('steadyTableBody');
-
-  tbody.innerHTML = STEADY_ROWS.map(row => {
-    const trainingPace = pbSeconds + row.delta;
-    const racePace = pbSeconds + row.raceDelta;
-    const predictedSeconds = racePace * row.raceDistance;
-
-    return `
-      <tr>
-        <td><span class="badge">${row.category}</span></td>
-        <td class="numeric font-mono font-bold text-primary">${formatPace(trainingPace)}</td>
-        <td>${row.duration}</td>
-        <td><strong>${row.race}</strong></td>
-        <td class="numeric font-mono font-bold">${formatPace(racePace)}</td>
-        <td class="numeric font-mono font-bold text-primary">${formatDuration(predictedSeconds)}</td>
-      </tr>
-    `;
-  }).join('');
-
-  // 更新统计卡片
-  const row5km = STEADY_ROWS[0];
-  const rowHalf = STEADY_ROWS[2];
-  const rowFull = STEADY_ROWS[3];
-
-  document.getElementById('pace5kmDisplay').textContent =
-    formatDuration((pbSeconds + row5km.raceDelta) * row5km.raceDistance);
-  document.getElementById('paceHalfDisplay').textContent =
-    formatDuration((pbSeconds + rowHalf.raceDelta) * rowHalf.raceDistance);
-  document.getElementById('paceFullDisplay').textContent =
-    formatDuration((pbSeconds + rowFull.raceDelta) * rowFull.raceDistance);
-}
-
-// 配速计算初始化
-function initPaceCalculator() {
-  const calcBtn = document.getElementById('calcPaceBtn');
-  const shareBtn = document.getElementById('sharePaceBtn');
-  const pbPaceInput = document.getElementById('pbPace');
-  const pbPaceHint = document.getElementById('pbPaceHint');
-
-  // 输入规范化
-  pbPaceInput.addEventListener('input', () => {
-    const normalized = normalizePaceInput(pbPaceInput.value);
-    if (pbPaceInput.value !== normalized) {
-      pbPaceInput.value = normalized;
-    }
-  });
-
-  // 计算配速课表
-  calcBtn.addEventListener('click', () => {
-    const raw = pbPaceInput.value.trim();
-    const pbSeconds = parsePace(raw);
-
-    if (pbSeconds === null) {
-      pbPaceHint.textContent = '请输入有效的 mm:ss 配速格式，例如 03:50；秒数必须在 00-59 之间。';
-      pbPaceHint.classList.add('error');
-      showNotice('paceNotice', '配速格式错误，请检查输入！', 'error');
-      return;
-    }
-
-    // 更新状态
-    state.pbPace = formatPace(pbSeconds);
-    state.hasPaceData = true;
-    pbPaceInput.value = state.pbPace;
-
-    // 清除错误提示
-    pbPaceHint.textContent = '格式校验通过。当前输入将作为全部训练配速和比赛预测的基准。';
-    pbPaceHint.classList.remove('error');
-
-    // 更新统计卡片
-    document.getElementById('paceCurrentDisplay').textContent = state.pbPace;
-
-    // 渲染结果
-    renderIntervalTable(pbSeconds);
-    renderSteadyTable(pbSeconds);
-
-    // 显示结果卡片
-    document.getElementById('intervalResultsCard').style.display = 'block';
-    document.getElementById('steadyResultsCard').style.display = 'block';
-
-    showNotice('paceNotice', '✓ 计算完成！已生成间歇训练和比赛预测方案。', 'success');
-
-    // 更新 URL
-    updateURL({ pbPace: state.pbPace });
-  });
-
-  // 分享链接
-  shareBtn.addEventListener('click', () => {
-    copyCurrentURL();
-    showNotice('paceNotice', '✓ 分享链接已复制到剪贴板！', 'success');
-  });
-}
-
-// =============================================================================
-// 智能联动功能
-// =============================================================================
-
-// 心率区间 → 配速推荐（基于经验公式）
-function estimatePaceFromHR(pbPaceSeconds, hrZone) {
-  const paceOffsets = {
-    'D': +80,   // 恢复跑：10km PB + 80秒
-    'E': +50,   // 有氧耐力：10km PB + 50秒
-    'M': +25,   // 马拉松配速：10km PB + 25秒
-    'T': +5,    // 乳酸阈值：10km PB + 5秒（接近10km配速）
-    'A': -8,    // 有氧动力：10km PB - 8秒（接近5km配速）
-    'I': -20    // 无氧能力：10km PB - 20秒（短间歇）
-  };
-
-  return pbPaceSeconds + (paceOffsets[hrZone] || 0);
-}
-
-// 配速 → 心率区间推荐
-function estimateHRZoneFromPace(pbPaceSeconds, currentPace) {
-  const delta = currentPace - pbPaceSeconds;
-
-  if (delta >= 60) return 'D';       // 慢很多 → 恢复跑
-  if (delta >= 30) return 'E';       // 慢 30-60秒 → 有氧
-  if (delta >= 15) return 'M';       // 慢 15-30秒 → 马拉松
-  if (delta >= -5) return 'T';       // ±5秒 → 乳酸阈值
-  if (delta >= -15) return 'A';      // 快 5-15秒 → 有氧动力
-  return 'I';                        // 快超过15秒 → 无氧
-}
-
-// 获取置信度（根据训练强度）
-function getConfidenceLevel(zoneCode) {
-  const confidence = {
-    'D': 3, // 中等（恢复跑个体差异较大）
-    'E': 4, // 高（有氧区间较稳定）
-    'M': 4, // 高（马拉松配速有明确对应）
-    'T': 5, // 非常高（乳酸阈值是关键指标）
-    'A': 4, // 高（5km配速参考）
-    'I': 3  // 中等（无氧区间个体差异大）
-  };
-  return confidence[zoneCode] || 3;
-}
-
-// 生成置信度星级
-function getConfidenceStars(level) {
-  return '⭐'.repeat(level);
-}
-
-// 获取训练说明
-function getTrainingNote(zoneCode) {
-  const notes = {
-    'D': '此配速应感觉非常轻松，可边跑边对话，用于恢复和热身。',
-    'E': '此配速应感觉轻松，可持续较长时间，是打基础的核心训练。',
-    'M': '此配速接近全马比赛强度，应感觉稍有吃力但可持续。',
-    'T': '此配速接近10km比赛强度，是提升乳酸阈值的关键训练，应感觉持续但可控的吃力。',
-    'A': '此配速接近5km配速，用于长间歇训练，提升最大摄氧量。',
-    'I': '此配速用于短间歇和速度训练，应全力但可重复多组。'
-  };
-  return notes[zoneCode] || '';
-}
-
-// 生成心率配速对照表
-function generateCombinedTable() {
-  // 检查是否有必要的数据
-  if (!state.hasHRData || !state.hasPaceData) {
-    return null;
-  }
-
-  const pbPaceSeconds = parsePace(state.pbPace);
-  if (!pbPaceSeconds) return null;
-
-  return state.hrZones.map(zone => {
-    const suggestedPaceSeconds = estimatePaceFromHR(pbPaceSeconds, zone.code);
-    const confidence = getConfidenceLevel(zone.code);
-
+function calculateHRZones(restHR, maxHR) {
+  const reserve = maxHR - restHR;
+  return HR_ZONES.map(zone => {
+    const hrMin = Math.round(restHR + reserve * zone.min);
+    const hrMax = Math.round(restHR + reserve * zone.max);
     return {
-      zone: zone.code,
-      zoneName: zone.name,
-      hrRange: zone.hrRange,
-      hrPercent: zone.intensity,
-      suggestedPace: formatPace(suggestedPaceSeconds),
-      paceRange: `${formatPace(suggestedPaceSeconds - 5)} - ${formatPace(suggestedPaceSeconds + 5)}`,
-      confidence: confidence,
-      confidenceStars: getConfidenceStars(confidence),
-      note: getTrainingNote(zone.code),
-      rq: zone.rq,
-      energy: zone.energy
+      ...zone,
+      hrMin,
+      hrMax,
+      hrRange: `${hrMin}-${hrMax}`,
+      intensity: `${Math.round(zone.min * 100)}-${Math.round(zone.max * 100)}%`
     };
   });
 }
 
-// 渲染联动结果
-function renderCombinedResults() {
-  const combinedTable = generateCombinedTable();
-
-  if (!combinedTable) {
-    // 显示提示信息
-    const panel = document.getElementById('combined-panel');
-    const notice = panel.querySelector('.notice');
-
-    if (!state.hasHRData && !state.hasPaceData) {
-      notice.innerHTML = `
-        <strong>💡 使用提示：</strong>
-        请先在"心率区间"和"配速课表"标签页中分别输入你的参数并计算，
-        然后返回此页面查看心率与配速的智能联动分析。
-      `;
-      notice.className = 'notice notice-warning';
-    } else if (!state.hasHRData) {
-      notice.innerHTML = `
-        <strong>⚠️ 缺少心率数据：</strong>
-        请先在"心率区间"标签页中计算你的心率区间。
-      `;
-      notice.className = 'notice notice-warning';
-    } else if (!state.hasPaceData) {
-      notice.innerHTML = `
-        <strong>⚠️ 缺少配速数据：</strong>
-        请先在"配速课表"标签页中计算你的配速方案。
-      `;
-      notice.className = 'notice notice-warning';
-    }
-
-    document.getElementById('combinedResults').style.display = 'none';
-    return;
+function parseEnergyString(energyStr) {
+  // 解析 "脂肪70% / 糖30%" 或 "糖95% / 脂肪5%" 或 "无氧糖酵解为主"
+  const fatFirst = energyStr.match(/脂肪(\d+)%.*?糖(\d+)%/);
+  if (fatFirst) {
+    return { fat: parseInt(fatFirst[1]), carb: parseInt(fatFirst[2]) };
   }
 
-  // 隐藏提示，显示结果
-  const panel = document.getElementById('combined-panel');
-  panel.querySelector('.notice').style.display = 'none';
-  document.getElementById('combinedResults').style.display = 'block';
+  const carbFirst = energyStr.match(/糖(\d+)%.*?脂肪(\d+)%/);
+  if (carbFirst) {
+    return { fat: parseInt(carbFirst[2]), carb: parseInt(carbFirst[1]) };
+  }
 
-  // 渲染表格
-  const tbody = document.getElementById('combinedTableBody');
-  tbody.innerHTML = combinedTable.map(row => `
-    <tr>
-      <td>
-        <span class="badge badge-zone-${row.zone.toLowerCase()}">${row.zone} 区</span>
-        <div style="margin-top: 4px; font-size: 13px; color: var(--muted);">${row.zoneName}</div>
-      </td>
-      <td>
-        <div class="font-mono font-bold">${row.hrRange} bpm</div>
-        <div style="margin-top: 2px; font-size: 12px; color: var(--muted);">${row.hrPercent}</div>
-      </td>
-      <td class="numeric">
-        <div class="font-mono font-bold text-primary" style="font-size: 16px;">${row.suggestedPace}</div>
-        <div style="margin-top: 2px; font-size: 11px; color: var(--muted);">±5秒: ${row.paceRange}</div>
-      </td>
-      <td>
-        <div style="margin-bottom: 4px;">
-          <span style="font-size: 16px;">${row.confidenceStars}</span>
-          <span style="font-size: 12px; color: var(--muted); margin-left: 4px;">
-            ${row.confidence === 5 ? '非常高' : row.confidence === 4 ? '高' : '中等'}
-          </span>
-        </div>
-        <div style="font-size: 12px; color: var(--muted); line-height: 1.5;">
-          ${row.note}
-        </div>
-      </td>
-    </tr>
-  `).join('');
+  // 无氧区间
+  if (energyStr.includes('无氧')) {
+    return { fat: 0, carb: 100 };
+  }
 
-  // 生成统计摘要
-  renderCombinedSummary(combinedTable);
+  return { fat: 50, carb: 50 };
 }
 
-// 渲染联动摘要
-function renderCombinedSummary(combinedTable) {
-  const summaryCard = document.getElementById('combinedSummary');
-  if (!summaryCard) return;
+function getRQDescription(rqStr) {
+  // 从 RQ 推断描述
+  const rqLower = parseFloat(rqStr.split('-')[0]);
+  if (rqLower < 0.80) return '脂肪燃烧为主';
+  if (rqLower < 0.90) return '糖脂混合供能';
+  return '糖原供能为主';
+}
 
-  // 找到关键区间
-  const tZone = combinedTable.find(z => z.zone === 'T');
-  const mZone = combinedTable.find(z => z.zone === 'M');
-  const eZone = combinedTable.find(z => z.zone === 'E');
+// =============================================================================
+// 核心逻辑 - 重计算与渲染
+// =============================================================================
 
-  summaryCard.innerHTML = `
-    <h3 class="card-title" style="font-size: 18px; margin-bottom: 16px;">💡 关键训练建议</h3>
+function recompute() {
+  // 1. 验证边界
+  if (state.maxHR <= state.restHR) {
+    state.maxHR = state.restHR + 10;
+    document.getElementById('maxHR').value = state.maxHR;
+  }
 
-    <div style="display: grid; gap: 14px;">
-      <div style="padding: 14px; border-radius: 12px; background: var(--panel-soft); border: 1px solid var(--line);">
-        <div style="font-size: 13px; color: var(--muted); margin-bottom: 6px;">🎯 乳酸阈值训练（T区）</div>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <span style="font-size: 12px; color: var(--muted);">心率：</span>
-            <span class="font-mono font-bold" style="font-size: 16px;">${tZone.hrRange} bpm</span>
-          </div>
-          <div>
-            <span style="font-size: 12px; color: var(--muted);">配速：</span>
-            <span class="font-mono font-bold text-primary" style="font-size: 16px;">${tZone.suggestedPace}</span>
-          </div>
-        </div>
-        <div style="margin-top: 8px; font-size: 12px; color: var(--muted); line-height: 1.5;">
-          节奏跑核心训练，持续 20-60 分钟，接近 10km 比赛强度。
-        </div>
+  // 2. 计算心率区间
+  state.zones = calculateHRZones(state.restHR, state.maxHR);
+
+  // 3. 解析配速
+  const pbSeconds = parsePace(state.pbPace);
+  if (pbSeconds) {
+    state.pbPaceSeconds = pbSeconds;
+  }
+
+  // 4. 更新控件显示值
+  document.getElementById('maxHRValue').innerHTML = `${state.maxHR} <small>bpm</small>`;
+  document.getElementById('restHRValue').innerHTML = `${state.restHR} <small>bpm</small>`;
+  document.getElementById('reserveValue').innerHTML =
+    `储备 ${state.maxHR - state.restHR} <small>bpm</small>`;
+
+  // 5. 渲染三大模块
+  renderZoneBar();
+  renderRQPanel();
+  renderPacePanel();
+
+  // 6. 渲染详细课表
+  renderIntervalTable();
+  renderSteadyTable();
+
+  // 7. URL 同步（可选）
+  updateURL();
+}
+
+// =============================================================================
+// 渲染 - 心率区间条带
+// =============================================================================
+
+function renderZoneBar() {
+  const zoneBar = document.getElementById('zoneBar');
+  const reserve = state.maxHR - state.restHR;
+
+  // 先计算每个区间的实际 bpm 跨度
+  const zoneWidths = state.zones.map(zone => {
+    return Math.round(reserve * (zone.max - zone.min));
+  });
+
+  // 总跨度应该等于储备心率
+  const totalWidth = zoneWidths.reduce((sum, w) => sum + w, 0);
+
+  zoneBar.innerHTML = state.zones.map((zone, idx) => {
+    // 按比例分配宽度，确保总和为 100%
+    const widthPercent = (zoneWidths[idx] / totalWidth * 100).toFixed(2);
+    const isActive = zone.code === state.selectedZone;
+
+    return `
+      <div class="zone-segment ${isActive ? 'active' : ''}"
+           data-zone="${zone.code}"
+           style="flex: 0 0 ${widthPercent}%"
+           role="tab"
+           aria-selected="${isActive}"
+           aria-label="${zone.code}区 ${zone.name} ${zone.hrRange} bpm">
+        <div class="zone-code">${zone.code}</div>
+        <div class="zone-bpm">${zone.hrRange}</div>
       </div>
+    `;
+  }).join('');
 
-      <div style="padding: 14px; border-radius: 12px; background: var(--panel-soft); border: 1px solid var(--line);">
-        <div style="font-size: 13px; color: var(--muted); margin-bottom: 6px;">🏃 马拉松配速（M区）</div>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <span style="font-size: 12px; color: var(--muted);">心率：</span>
-            <span class="font-mono font-bold" style="font-size: 16px;">${mZone.hrRange} bpm</span>
-          </div>
-          <div>
-            <span style="font-size: 12px; color: var(--muted);">配速：</span>
-            <span class="font-mono font-bold text-primary" style="font-size: 16px;">${mZone.suggestedPace}</span>
-          </div>
-        </div>
-        <div style="margin-top: 8px; font-size: 12px; color: var(--muted); line-height: 1.5;">
-          全马比赛配速训练，应感觉稍有吃力但可持续。
-        </div>
-      </div>
+  // 绑定点击事件
+  zoneBar.querySelectorAll('.zone-segment').forEach(seg => {
+    seg.addEventListener('click', () => {
+      state.selectedZone = seg.dataset.zone;
+      recompute();
+    });
+  });
 
-      <div style="padding: 14px; border-radius: 12px; background: var(--panel-soft); border: 1px solid var(--line);">
-        <div style="font-size: 13px; color: var(--muted); margin-bottom: 6px;">🌱 轻松跑（E区）</div>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <span style="font-size: 12px; color: var(--muted);">心率：</span>
-            <span class="font-mono font-bold" style="font-size: 16px;">${eZone.hrRange} bpm</span>
-          </div>
-          <div>
-            <span style="font-size: 12px; color: var(--muted);">配速：</span>
-            <span class="font-mono font-bold text-primary" style="font-size: 16px;">${eZone.suggestedPace}</span>
-          </div>
-        </div>
-        <div style="margin-top: 8px; font-size: 12px; color: var(--muted); line-height: 1.5;">
-          打基础的核心训练，应感觉轻松，可持续较长时间。
-        </div>
+  // 刻度
+  const zoneScale = document.getElementById('zoneScale');
+  zoneScale.innerHTML = `
+    <span>${state.restHR}</span>
+    <span>${state.maxHR}</span>
+  `;
+
+  // 区间详情
+  const selected = state.zones.find(z => z.code === state.selectedZone);
+  if (selected) {
+    document.getElementById('zoneDetail').innerHTML = `
+      <div class="zone-detail-title">${selected.code} 区 - ${selected.name}</div>
+      <div class="zone-detail-desc">
+        <strong>心率：</strong>${selected.hrRange} bpm（${selected.intensity}）
+        · <strong>用途：</strong>${selected.use}
       </div>
+    `;
+  }
+}
+
+// =============================================================================
+// 渲染 - RQ 呼吸商指示
+// =============================================================================
+
+function renderRQPanel() {
+  const selected = state.zones.find(z => z.code === state.selectedZone);
+  if (!selected) return;
+
+  const energy = parseEnergyString(selected.energy);
+  const desc = getRQDescription(selected.rq);
+
+  document.getElementById('rqPanel').innerHTML = `
+    <div class="rq-hero">
+      <div class="rq-label">当前区间 RQ 范围</div>
+      <div class="rq-value">${selected.rq}</div>
+      <div class="rq-desc">${desc}</div>
+    </div>
+
+    <div class="energy-bar">
+      <div class="energy-segment fat" style="flex: 0 0 ${energy.fat}%">
+        ${energy.fat > 15 ? `脂肪 ${energy.fat}%` : ''}
+      </div>
+      <div class="energy-segment carb" style="flex: 0 0 ${energy.carb}%">
+        ${energy.carb > 15 ? `糖 ${energy.carb}%` : ''}
+      </div>
+    </div>
+
+    <div class="energy-legend">
+      <div class="energy-legend-item">
+        <span class="energy-dot fat"></span>
+        <span>脂肪供能 ${energy.fat}%</span>
+      </div>
+      <div class="energy-legend-item">
+        <span class="energy-dot carb"></span>
+        <span>糖原供能 ${energy.carb}%</span>
+      </div>
+    </div>
+
+    <div class="rq-note">
+      <strong>科学原理：</strong>${selected.use}。RQ 值越低，脂肪供能占比越高；越高则糖原占比越大。
     </div>
   `;
 }
 
 // =============================================================================
-// 工具函数
+// 渲染 - 配速预测
 // =============================================================================
 
-// 显示通知
-function showNotice(elementId, message, type = 'info') {
-  const notice = document.getElementById(elementId);
-  notice.textContent = message;
-  notice.className = 'notice';
+function renderPacePanel() {
+  const selected = state.zones.find(z => z.code === state.selectedZone);
+  if (!selected) return;
 
-  if (type === 'success') notice.classList.add('notice-success');
-  if (type === 'warning') notice.classList.add('notice-warning');
-  if (type === 'error') notice.classList.add('notice-error');
+  const suggestedPace = state.pbPaceSeconds + PACE_OFFSETS[selected.code];
+  const rangeMin = formatPace(suggestedPace - 5);
+  const rangeMax = formatPace(suggestedPace + 5);
+
+  // Hero 区域
+  document.getElementById('paceHero').innerHTML = `
+    <div class="pace-hero-label">${selected.code} 区 - ${selected.name}</div>
+    <div class="pace-hero-value">${formatPace(suggestedPace)}</div>
+    <div class="pace-hero-range">建议范围：${rangeMin} ~ ${rangeMax}</div>
+  `;
+
+  // 列表
+  const paceList = document.getElementById('paceList');
+  paceList.innerHTML = state.zones.map(zone => {
+    const pace = state.pbPaceSeconds + PACE_OFFSETS[zone.code];
+    const isActive = zone.code === state.selectedZone;
+
+    return `
+      <li class="pace-item ${isActive ? 'active' : ''}" data-zone="${zone.code}">
+        <div class="pace-item-zone">
+          <span class="pace-item-badge" data-zone="${zone.code}">${zone.code}</span>
+          <span>${zone.name}</span>
+        </div>
+        <div class="pace-item-value">${formatPace(pace)}</div>
+      </li>
+    `;
+  }).join('');
+
+  // 绑定点击事件
+  paceList.querySelectorAll('.pace-item').forEach(item => {
+    item.addEventListener('click', () => {
+      state.selectedZone = item.dataset.zone;
+      recompute();
+    });
+  });
 }
 
-// 更新 URL 参数
-function updateURL(params) {
+// =============================================================================
+// 渲染 - 详细课表（复用原有函数）
+// =============================================================================
+
+function renderIntervalTable() {
+  const tbody = document.getElementById('intervalTableBody');
+  const pbSeconds = state.pbPaceSeconds;
+
+  tbody.innerHTML = INTERVAL_ROWS.map(row => {
+    const pace = row.paceText || formatPace(pbSeconds + row.delta);
+    const typeCell = row.type ? `<span class="badge">${row.type}</span>` : '';
+
+    return `
+      <tr>
+        <td data-label="训练类型">${typeCell}</td>
+        <td data-label="距离">${row.distance}</td>
+        <td class="numeric font-mono font-bold text-primary" data-label="建议配速">${pace}</td>
+        <td class="numeric font-mono" data-label="间歇时长">${row.rest}</td>
+        <td class="numeric" data-label="建议组数">${row.reps}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderSteadyTable() {
+  const trainingBody = document.getElementById('steadyTrainingBody');
+  const raceBody = document.getElementById('racePredicBody');
+  const pbSeconds = state.pbPaceSeconds;
+
+  // 匀速跑训练表
+  trainingBody.innerHTML = STEADY_ROWS.map(row => {
+    const trainingPace = pbSeconds + row.delta;
+    return `
+      <tr>
+        <td data-label="训练类别"><span class="badge">${row.category}</span></td>
+        <td class="numeric font-mono font-bold text-primary" data-label="建议配速">${formatPace(trainingPace)}</td>
+        <td data-label="训练时长">${row.duration}</td>
+      </tr>
+    `;
+  }).join('');
+
+  // 比赛预测表
+  raceBody.innerHTML = STEADY_ROWS.map(row => {
+    const racePace = pbSeconds + row.raceDelta;
+    const predictedSeconds = racePace * row.raceDistance;
+    return `
+      <tr>
+        <td data-label="比赛项目"><strong>${row.race}</strong></td>
+        <td class="numeric font-mono font-bold" data-label="比赛配速">${formatPace(racePace)}</td>
+        <td class="numeric font-mono font-bold text-primary" data-label="成绩预测">${formatDuration(predictedSeconds)}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// =============================================================================
+// URL 同步（可选）
+// =============================================================================
+
+function updateURL() {
   const url = new URL(window.location);
-  Object.entries(params).forEach(([key, value]) => {
-    if (value) {
-      url.searchParams.set(key, value);
-    } else {
-      url.searchParams.delete(key);
-    }
-  });
+  url.searchParams.set('maxHR', state.maxHR);
+  url.searchParams.set('restHR', state.restHR);
+  url.searchParams.set('pbPace', state.pbPace);
+  url.searchParams.set('zone', state.selectedZone);
   window.history.replaceState({}, '', url);
 }
 
-// 复制当前 URL
-function copyCurrentURL() {
-  const url = window.location.href;
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(url);
-  } else {
-    // 降级方案
-    const input = document.createElement('input');
-    input.value = url;
-    document.body.appendChild(input);
-    input.select();
-    document.execCommand('copy');
-    document.body.removeChild(input);
+function loadFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('maxHR')) {
+    const val = parseInt(params.get('maxHR'));
+    if (val >= 150 && val <= 210) {
+      state.maxHR = val;
+      document.getElementById('maxHR').value = val;
+    }
+  }
+  if (params.has('restHR')) {
+    const val = parseInt(params.get('restHR'));
+    if (val >= 40 && val <= 90) {
+      state.restHR = val;
+      document.getElementById('restHR').value = val;
+    }
+  }
+  if (params.has('pbPace')) {
+    const pace = params.get('pbPace');
+    if (parsePace(pace)) {
+      state.pbPace = pace;
+      document.getElementById('pbPace').value = pace;
+    }
+  }
+  if (params.has('zone')) {
+    const zone = params.get('zone');
+    if (['D', 'E', 'M', 'T', 'A', 'I'].includes(zone)) {
+      state.selectedZone = zone;
+    }
   }
 }
 
-// 从 URL 加载参数
-function loadFromURL() {
-  const params = new URLSearchParams(window.location.search);
+// =============================================================================
+// 事件绑定
+// =============================================================================
 
-  // 加载标签页
-  const tab = params.get('tab');
-  if (tab && ['hr-zones', 'pace-table', 'combined'].includes(tab)) {
-    document.querySelector(`[data-tab="${tab}"]`)?.click();
-  }
+function initControls() {
+  const maxHRSlider = document.getElementById('maxHR');
+  const restHRSlider = document.getElementById('restHR');
+  const pbPaceInput = document.getElementById('pbPace');
+  const resetBtn = document.getElementById('resetBtn');
 
-  // 加载心率参数
-  if (params.has('restHR')) {
-    document.getElementById('restHR').value = params.get('restHR');
-  }
-  if (params.has('age')) {
-    document.getElementById('age').value = params.get('age');
-  }
-  if (params.has('maxHR')) {
-    document.getElementById('maxHR').value = params.get('maxHR');
-  }
-  if (params.has('formula')) {
-    document.getElementById('maxHrFormula').value = params.get('formula');
-  }
+  // 最大心率
+  maxHRSlider.addEventListener('input', (e) => {
+    state.maxHR = parseInt(e.target.value);
+    recompute();
+  });
 
-  // 加载配速参数
-  if (params.has('pbPace')) {
-    document.getElementById('pbPace').value = params.get('pbPace');
-  }
+  // 静息心率
+  restHRSlider.addEventListener('input', (e) => {
+    state.restHR = parseInt(e.target.value);
+    recompute();
+  });
 
-  // 如果有参数，自动触发计算
-  if (params.has('restHR') && params.has('age')) {
-    setTimeout(() => document.getElementById('calcHrBtn').click(), 100);
-  }
-  if (params.has('pbPace')) {
-    setTimeout(() => document.getElementById('calcPaceBtn').click(), 100);
-  }
+  // 配速输入
+  pbPaceInput.addEventListener('input', (e) => {
+    const normalized = normalizePaceInput(e.target.value);
+    if (e.target.value !== normalized) {
+      e.target.value = normalized;
+    }
+  });
+
+  pbPaceInput.addEventListener('blur', (e) => {
+    const value = e.target.value.trim();
+    const pbSeconds = parsePace(value);
+
+    const hint = document.getElementById('pbPaceHint');
+    if (pbSeconds === null && value !== '') {
+      hint.textContent = '格式错误，请输入 mm:ss（秒数 00-59）';
+      hint.style.color = '#ef4444';
+      return;
+    }
+
+    if (pbSeconds) {
+      state.pbPace = formatPace(pbSeconds);
+      e.target.value = state.pbPace;
+      hint.textContent = '格式 mm:ss，作为各区间配速推算的基准。';
+      hint.style.color = '';
+      recompute();
+    }
+  });
+
+  pbPaceInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.target.blur();
+    }
+  });
+
+  // 重置按钮
+  resetBtn.addEventListener('click', () => {
+    state.maxHR = 185;
+    state.restHR = 60;
+    state.pbPace = '03:50';
+    state.selectedZone = 'T';
+
+    document.getElementById('maxHR').value = 185;
+    document.getElementById('restHR').value = 60;
+    document.getElementById('pbPace').value = '03:50';
+
+    recompute();
+  });
 }
 
 // =============================================================================
@@ -760,10 +548,8 @@ function loadFromURL() {
 // =============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-  initTabs();
-  initHRCalculator();
-  initPaceCalculator();
   loadFromURL();
-
-  console.log('🏃 Sylas Training Hub initialized');
+  initControls();
+  recompute();
+  console.log('🏃 Sylas Training Hub - Interactive Widget initialized');
 });
