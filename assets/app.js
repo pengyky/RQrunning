@@ -513,15 +513,29 @@ function initControls() {
   const pbPaceInput = document.getElementById('pbPace');
   const resetBtn = document.getElementById('resetBtn');
 
-  // 最大心率
+  // 最大心率（添加验证）
   maxHRSlider.addEventListener('input', (e) => {
-    state.maxHR = parseInt(e.target.value);
+    const newMaxHR = parseInt(e.target.value);
+    // 验证：最大心率必须大于静息心率
+    if (newMaxHR <= state.restHR) {
+      // 自动调整静息心率
+      state.restHR = Math.max(40, newMaxHR - 10);
+      document.getElementById('restHR').value = state.restHR;
+    }
+    state.maxHR = newMaxHR;
     recompute();
   });
 
-  // 静息心率
+  // 静息心率（添加验证）
   restHRSlider.addEventListener('input', (e) => {
-    state.restHR = parseInt(e.target.value);
+    const newRestHR = parseInt(e.target.value);
+    // 验证：静息心率必须小于最大心率
+    if (newRestHR >= state.maxHR) {
+      // 自动调整最大心率
+      state.maxHR = Math.min(210, newRestHR + 10);
+      document.getElementById('maxHR').value = state.maxHR;
+    }
+    state.restHR = newRestHR;
     recompute();
   });
 
@@ -540,7 +554,14 @@ function initControls() {
     const hint = document.getElementById('pbPaceHint');
     if (pbSeconds === null && value !== '') {
       hint.textContent = '格式错误，请输入 mm:ss（秒数 00-59）';
-      hint.style.color = '#ef4444';
+      hint.style.color = '#ff6b35';
+      return;
+    }
+
+    // 添加合理性检查（2:00 - 10:00 之间）
+    if (pbSeconds && (pbSeconds < 120 || pbSeconds > 600)) {
+      hint.textContent = '配速应在 2:00 - 10:00 之间，请检查输入';
+      hint.style.color = '#ff6b35';
       return;
     }
 
@@ -559,15 +580,19 @@ function initControls() {
     }
   });
 
-  // 重置按钮
+  // 重置按钮（添加确认提示）
   resetBtn.addEventListener('click', () => {
-    state.maxHR = 185;
-    state.restHR = 60;
+    if (!confirm('确定要重置所有参数到默认值吗？')) {
+      return;
+    }
+
+    state.maxHR = 190;
+    state.restHR = 50;
     state.pbPace = '03:50';
     state.selectedZone = 'T';
 
-    document.getElementById('maxHR').value = 185;
-    document.getElementById('restHR').value = 60;
+    document.getElementById('maxHR').value = 190;
+    document.getElementById('restHR').value = 50;
     document.getElementById('pbPace').value = '03:50';
 
     recompute();
