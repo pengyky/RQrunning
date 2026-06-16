@@ -382,7 +382,7 @@
     <header class="text-center py-12">
       <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--sport-green);">呼吸节奏 · Breathing Rhythm</p>
       <h1 class="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-4 glow-sport" style="color: var(--sport-green);">
-        🏃 跑步训练强度仪表盘
+        🏃 跑步训练仪表盘
       </h1>
       <p class="text-base sm:text-lg leading-relaxed max-w-3xl mx-auto" style="color: var(--text-secondary);">
         拖动滑块设置最大心率与 10km PB 配速，点击区间条带选择目标强度，
@@ -409,10 +409,10 @@
           <div class="flex justify-between items-baseline mb-3">
             <label for="maxHR" class="text-sm font-semibold" style="color: var(--text-secondary);">最大心率</label>
             <output id="maxHRValue" class="text-2xl font-bold" style="color: var(--sport-green);">
-              185 <small class="text-sm" style="color: var(--text-secondary);">bpm</small>
+              190 <small class="text-sm" style="color: var(--text-secondary);">bpm</small>
             </output>
           </div>
-          <input type="range" id="maxHR" min="150" max="210" step="1" value="185" aria-label="最大心率（bpm）">
+          <input type="range" id="maxHR" min="150" max="210" step="1" value="190" aria-label="最大心率（bpm）">
           <p class="text-xs mt-2" style="color: var(--text-secondary);">可由 220−年龄 估算，或填入手表实测值。</p>
         </div>
 
@@ -421,10 +421,10 @@
           <div class="flex justify-between items-baseline mb-3">
             <label for="restHR" class="text-sm font-semibold" style="color: var(--text-secondary);">静息心率</label>
             <output id="restHRValue" class="text-2xl font-bold" style="color: var(--sport-green);">
-              60 <small class="text-sm" style="color: var(--text-secondary);">bpm</small>
+              50 <small class="text-sm" style="color: var(--text-secondary);">bpm</small>
             </output>
           </div>
-          <input type="range" id="restHR" min="40" max="90" step="1" value="60" aria-label="静息心率（bpm）">
+          <input type="range" id="restHR" min="40" max="90" step="1" value="50" aria-label="静息心率（bpm）">
           <p class="text-xs mt-2" style="color: var(--text-secondary);">清晨自然醒、起身前测量，连续 3-7 天取平均。</p>
         </div>
 
@@ -433,7 +433,7 @@
           <div class="flex justify-between items-baseline mb-3">
             <label for="pbPace" class="text-sm font-semibold" style="color: var(--text-secondary);">10km PB 配速</label>
             <output id="reserveValue" class="text-lg font-bold" style="color: var(--text-secondary);">
-              储备 125 <small class="text-sm">bpm</small>
+              储备 140 <small class="text-sm">bpm</small>
             </output>
           </div>
           <input type="text"
