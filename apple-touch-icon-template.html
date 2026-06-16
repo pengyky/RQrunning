@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apple Touch Icon Generator - 呼吸节奏</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Microsoft YaHei', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: #f5f5f5;
+      padding: 40px;
+    }
+
+    /* 图标容器 - 180x180 标准尺寸 */
+    .icon-card {
+      width: 180px;
+      height: 180px;
+      background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+      border-radius: 40px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* 背景装饰 */
+    .bg-glow {
+      position: absolute;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 255, 136, 0.3) 0%, transparent 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      animation: pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+      50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.7; }
+    }
+
+    /* Logo */
+    .logo {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .logo-dot {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: #00ff88;
+      box-shadow: 0 0 20px rgba(0, 255, 136, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 28px;
+    }
+
+    .logo-text-cn {
+      font-size: 24px;
+      font-weight: 800;
+      color: #00ff88;
+      text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+      letter-spacing: 1px;
+    }
+
+    .logo-text-en {
+      font-size: 10px;
+      font-weight: 600;
+      color: #00d9ff;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      opacity: 0.8;
+    }
+
+    /* 使用说明 */
+    .instructions {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      max-width: 300px;
+      font-size: 14px;
+      line-height: 1.6;
+      z-index: 1000;
+    }
+
+    .instructions h3 {
+      margin-bottom: 10px;
+      color: #1a1a1a;
+    }
+
+    .instructions ol {
+      margin-left: 20px;
+      color: #666;
+    }
+
+    .instructions button {
+      margin-top: 10px;
+      padding: 8px 16px;
+      background: #00ff88;
+      border: none;
+      border-radius: 4px;
+      color: #1a1a1a;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .note {
+      margin-top: 10px;
+      padding: 10px;
+      background: #fff3cd;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #856404;
+    }
+  </style>
+</head>
+<body>
+  <div class="instructions" id="instructions">
+    <h3>📱 生成 Apple Touch Icon</h3>
+    <ol>
+      <li>点击"隐藏说明"按钮</li>
+      <li>截取 180x180 的图标</li>
+      <li>保存为 apple-touch-icon.png</li>
+      <li>替换项目中的旧图标</li>
+    </ol>
+    <div class="note">
+      💡 提示：使用截图工具的固定尺寸模式，确保是正方形 180x180px
+    </div>
+    <button onclick="document.getElementById('instructions').style.display='none'">隐藏说明</button>
+  </div>
+
+  <div class="icon-card">
+    <div class="bg-glow"></div>
+    <div class="logo">
+      <div class="logo-dot">🏃</div>
+      <div class="logo-text-cn">呼吸节奏</div>
+      <div class="logo-text-en">RQrunning</div>
+    </div>
+  </div>
+</body>
+</html>

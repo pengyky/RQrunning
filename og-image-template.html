@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OG Image Generator - 呼吸节奏</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Microsoft YaHei', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+
+    /* OG 图片容器 - 1200x630 标准尺寸 */
+    .og-card {
+      width: 1200px;
+      height: 630px;
+      background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+      border-radius: 0;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    /* 背景装饰 */
+    .bg-decoration {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      opacity: 0.1;
+    }
+
+    .bg-circle {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle, #00ff88 0%, transparent 70%);
+    }
+
+    .circle-1 {
+      width: 600px;
+      height: 600px;
+      top: -200px;
+      right: -100px;
+    }
+
+    .circle-2 {
+      width: 400px;
+      height: 400px;
+      bottom: -150px;
+      left: -50px;
+      background: radial-gradient(circle, #00d9ff 0%, transparent 70%);
+    }
+
+    /* 心率波形 */
+    .heartbeat {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 120px;
+      opacity: 0.15;
+    }
+
+    .heartbeat svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 内容区 */
+    .content {
+      position: relative;
+      z-index: 1;
+      padding: 80px 100px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Logo 区域 */
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .logo-dot {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: #00ff88;
+      box-shadow: 0 0 40px rgba(0, 255, 136, 0.6);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.8; }
+    }
+
+    .logo-text {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .brand-cn {
+      font-size: 56px;
+      font-weight: 800;
+      color: #00ff88;
+      letter-spacing: 2px;
+      text-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+    }
+
+    .brand-en {
+      font-size: 28px;
+      font-weight: 600;
+      color: #00d9ff;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      opacity: 0.9;
+    }
+
+    /* 主标题 */
+    .main-title {
+      font-size: 64px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.3;
+      margin: 40px 0 30px;
+    }
+
+    .emoji {
+      font-size: 72px;
+    }
+
+    /* 副标题 */
+    .subtitle {
+      font-size: 32px;
+      color: rgba(255, 255, 255, 0.8);
+      line-height: 1.6;
+      max-width: 900px;
+    }
+
+    .highlight {
+      color: #00ff88;
+      font-weight: 600;
+    }
+
+    /* 底部标签 */
+    .tags {
+      display: flex;
+      gap: 20px;
+      margin-top: auto;
+    }
+
+    .tag {
+      padding: 12px 24px;
+      border-radius: 8px;
+      background: rgba(0, 255, 136, 0.15);
+      border: 2px solid rgba(0, 255, 136, 0.3);
+      color: #00ff88;
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    /* 使用说明 */
+    .instructions {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      max-width: 300px;
+      font-size: 14px;
+      line-height: 1.6;
+      z-index: 1000;
+    }
+
+    .instructions h3 {
+      margin-bottom: 10px;
+      color: #1a1a1a;
+    }
+
+    .instructions ol {
+      margin-left: 20px;
+      color: #666;
+    }
+
+    .instructions button {
+      margin-top: 10px;
+      padding: 8px 16px;
+      background: #00ff88;
+      border: none;
+      border-radius: 4px;
+      color: #1a1a1a;
+      font-weight: 600;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="instructions" id="instructions">
+    <h3>📸 生成 OG 图片</h3>
+    <ol>
+      <li>点击下方"隐藏说明"按钮</li>
+      <li>使用截图工具截取整个卡片（1200x630）</li>
+      <li>保存为 og-image.png</li>
+      <li>替换项目中的旧图片</li>
+    </ol>
+    <button onclick="document.getElementById('instructions').style.display='none'">隐藏说明</button>
+  </div>
+
+  <div class="og-card">
+    <!-- 背景装饰 -->
+    <div class="bg-decoration">
+      <div class="bg-circle circle-1"></div>
+      <div class="bg-circle circle-2"></div>
+    </div>
+
+    <!-- 心率波形 -->
+    <div class="heartbeat">
+      <svg viewBox="0 0 1200 120" xmlns="http://www.w3.org/2000/svg">
+        <path d="M 0 60 L 200 60 L 220 40 L 240 80 L 260 20 L 280 60 L 400 60 L 420 40 L 440 80 L 460 20 L 480 60 L 600 60 L 620 40 L 640 80 L 660 20 L 680 60 L 800 60 L 820 40 L 840 80 L 860 20 L 880 60 L 1000 60 L 1020 40 L 1040 80 L 1060 20 L 1080 60 L 1200 60"
+              stroke="#00ff88"
+              stroke-width="3"
+              fill="none"/>
+      </svg>
+    </div>
+
+    <!-- 内容区 -->
+    <div class="content">
+      <!-- Logo -->
+      <div class="logo-area">
+        <div class="logo-dot"></div>
+        <div class="logo-text">
+          <div class="brand-cn">呼吸节奏</div>
+          <div class="brand-en">Breathing Rhythm</div>
+        </div>
+      </div>
+
+      <!-- 主标题 -->
+      <div class="main-title">
+        <span class="emoji">🏃</span> 跑步训练强度仪表盘
+      </div>
+
+      <!-- 副标题 -->
+      <div class="subtitle">
+        实时联动探索 <span class="highlight">心率区间</span> · <span class="highlight">呼吸商 RQ</span> · <span class="highlight">配速预测</span>
+      </div>
+
+      <!-- 标签 -->
+      <div class="tags">
+        <div class="tag">科学训练</div>
+        <div class="tag">实时联动</div>
+        <div class="tag">零依赖</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
